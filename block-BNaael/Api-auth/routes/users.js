@@ -1,11 +1,11 @@
 var express = require('express');
 var router = express.Router();
 var User = require('../models/User')
-var jwt = require('jsonwebtoken');
-const { json } = require('express');
+var auth = require('../middlewares/auth')
+
 
 /* GET users listing. */
-router.get('/', function (req, res, next) {
+router.get('/', auth.varifyToken, function (req, res, next) {
   res.send('respond with a resource');
 });
 
@@ -13,7 +13,8 @@ router.get('/', function (req, res, next) {
 router.post('/register', async (req, res, next) => {
   try {
     let user = await User.create(req.body)
-    res.status(201).json({ user })
+    let token = await user.signToken()
+    res.status(201).json({ user: user.userJSON(token) })
   } catch (error) {
     next(error)
   }
@@ -37,10 +38,11 @@ router.post('/login', async (req, res, next) => {
     if (!result) {
       return res.status(400).json({ message: 'Invalid password' })
     }
-    
+
     //generate token
-   let token =  jwt.sign({email}, 'tewyryuw',{expiresIn: '1d'})
-   res,json({token: token})
+    let token = await user.signToken()
+    res.json({ user: user.userJSON(token) })
+
   } catch (error) {
     next(error)
   }
