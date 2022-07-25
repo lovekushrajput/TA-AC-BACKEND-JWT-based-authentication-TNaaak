@@ -9,11 +9,11 @@ router.get('/', function (req, res, next) {
 });
 
 //get tag
-router.get('/tags', auth.varifyToken, async (req, res, next) => {
+router.get('/tags', async (req, res, next) => {
   let article = await Article.find({})
   let ar = []
-   article.forEach((elm) => ar.push(elm.taglist))
-   res.json({tags: ar.flat()})
+  article.forEach((elm) => ar.push(elm.taglist))
+  res.json({ tags: ar.flat() })
 })
 
 module.exports = router;
