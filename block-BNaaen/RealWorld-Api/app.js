@@ -4,7 +4,7 @@ var cookieParser = require('cookie-parser');
 var logger = require('morgan');
 var mongoose = require('mongoose')
 require('dotenv').config()
-var auth  = require('./middleware/auth')
+
 
 //mongoose connect
 mongoose.connect('mongodb://localhost/realWorld-Api', (err) => console.log(err ? err : 'connected true'))
@@ -23,7 +23,9 @@ app.use(express.static(path.join(__dirname, 'public')));
 
 app.use('/api', indexRouter);
 app.use('/api/users', usersRouter);
-app.use('/api/articles',articleRouter)
+app.use('/api/profiles', require('./routes/profile'));
+app.use('/api/articles', articleRouter);
+
 
 
 

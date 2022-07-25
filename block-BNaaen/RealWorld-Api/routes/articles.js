@@ -62,7 +62,7 @@ router.get('/feed', async (req, res, next) => {
     }
 })
 
-//single article
+//get article
 router.get('/:slug', async (req, res, next) => {
     let slug = req.params.slug
     let article = await Article.findOne({ slug }).populate('author', 'username bio image following')
@@ -72,14 +72,20 @@ router.get('/:slug', async (req, res, next) => {
 
 //crate article
 router.post('/', async (req, res, next) => {
+    let loggedInUser = req.users.userId
+
     try {
         req.body.author = req.users.userId
         req.body.taglist = req.body.taglist.split(',')
         let data = await Article.create(req.body)
-        let article = await data.populate('author', 'username bio image following')
+        let article = await data.populate('author', 'username bio image following follow')
+        if (article.author.follow.includes(loggedInUser)) {
+            article.author.following = true
+            let user = await User.findByIdAndUpdate(req.users.userId, { $push: { article: article._id } }, { new: true })
+            return res.json({ article })
+        }
         let user = await User.findByIdAndUpdate(req.users.userId, { $push: { article: article._id } }, { new: true })
-        user.save()
-        res.json({ article })
+        return res.json({ article })
     } catch (error) {
         next(error)
     }
@@ -88,7 +94,7 @@ router.post('/', async (req, res, next) => {
 
 
 
-//edit articles
+//update articles
 router.put('/:slug', async (req, res, next) => {
     let slug = req.params.slug
     if (req.body.title) {
@@ -101,9 +107,9 @@ router.put('/:slug', async (req, res, next) => {
 //delete article
 router.delete('/:slug', async (req, res, next) => {
     let slug = req.params.slug
-    let article = await Article.findOneAndDelete({ slug })
-    let user = await User.findByIdAndUpdate(req.users.userId, { $pull: { article: article._id } })
-    user.save()
+    let article = await Article.findOneAndDelete({ slug: slug })
+    let user = await User.findByIdAndUpdate(req.users.userId, { $pull: { article: article._id } }, { new: true })
+    let comment = await Comment.deleteMany({ articleId: article._id })
     res.json({ article })
 })
 
@@ -111,11 +117,21 @@ router.delete('/:slug', async (req, res, next) => {
 // create comment
 router.post('/:slug/comments', async (req, res, next) => {
     let slug = req.params.slug
-    let article = await Article.findOne({ slug: slug })
-    req.body.articleId = article._id
-    let comments = await Comment.create(req.body)
-    let arti = await Article.findByIdAndUpdate(article._id, { $push: { commentId: comments._id } })
-    res.json(comments)
+    let loggedInUser = req.users.userId
+
+    let artcle = await Article.findOne({ slug: slug })
+    let user = await User.findById(loggedInUser)
+    req.body.author = {
+        _id: user._id,
+        username: user.username,
+        bio: user.bio,
+        image: user.image,
+        following: user.following
+    }
+    req.body.articleId = artcle._id
+    let comment = await Comment.create(req.body)
+    let article = await Article.findOneAndUpdate({ slug: slug }, { $push: { commentId: comment._id } })
+    res.json(comment)
 })
 
 
